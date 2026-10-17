@@ -36,3 +36,10 @@ def instance_status(instance_id: str):
     if proc is None:
         raise HTTPException(status_code=404, detail="Instance not found")
     return {"running": proc.is_running()}
+
+# TEMPORARY — remove once real instance creation exists
+supervisor["test"] = ServerProcess(
+    instance_dir="instances/test",
+    jar_name="server.jar",
+    ram_mb=2048,
+)
