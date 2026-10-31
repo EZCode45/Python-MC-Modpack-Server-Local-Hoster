@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Create Fabric Server</h2>
+
+<form id="create-form">
+    <label>Server Name <input type="text" id="name" required></label><br>
+    <label>Minecraft Version <input type="text" id="mc_version" placeholder="1.21.1" required></label><br>
+    <label>Fabric Loader Version <input type="text" id="loader_version" placeholder="0.16.9" required></label><br>
+    <label>RAM (MB) <input type="number" id="ram_mb" value="2048" required></label><br>
+    <label>Port <input type="number" id="port" value="25565" required></label><br>
+    <button type="submit">Create</button>
+</form>
+
+<p id="create-status"></p>
+
+<script>
+document.getElementById("create-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const status = document.getElementById("create-status");
+    status.textContent = "Creating... downloading server jar, this may take a moment.";
+
+    const body = {
+        name: document.getElementById("name").value,
+        mc_version: document.getElementById("mc_version").value,
+        loader_version: document.getElementById("loader_version").value,
+        ram_mb: parseInt(document.getElementById("ram_mb").value),
+        port: parseInt(document.getElementById("port").value),
+    };
+
+    const res = await fetch("/api/instances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+        const inst = await res.json();
+        window.location.href = "/instances/" + inst.id;
+    } else {
+        const err = await res.json();
+        status.textContent = "Error: " + err.detail;
+    }
+});
+</script>
+{% endblock %}

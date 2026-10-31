@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<a class="btn" href="/create">+ Create Server</a>
+
+<div id="instance-list" hx-get="/partials/instances" hx-trigger="load, every 5s" hx-swap="innerHTML">
+    Loading...
+</div>
+{% endblock %}

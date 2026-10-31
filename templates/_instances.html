@@ -1,0 +1,21 @@
+<div class="instance-grid">
+{% for inst in instances %}
+    <div class="card">
+        <h3><a href="/instances/{{ inst.id }}">{{ inst.name }}</a></h3>
+        <p>{{ inst.loader }} · {{ inst.mc_version }}</p>
+        <p>Status: <span class="{{ 'running' if inst.running else 'stopped' }}">
+            {{ "Running" if inst.running else "Stopped" }}
+        </span></p>
+        <p>Port: {{ inst.port }} · RAM: {{ inst.ram_mb }}MB</p>
+
+        {% if inst.running %}
+            <button hx-post="/api/instances/{{ inst.id }}/stop" hx-target="#instance-list" hx-swap="none">Stop</button>
+            <button hx-post="/api/instances/{{ inst.id }}/restart" hx-target="#instance-list" hx-swap="none">Restart</button>
+        {% else %}
+            <button hx-post="/api/instances/{{ inst.id }}/start" hx-target="#instance-list" hx-swap="none">Start</button>
+        {% endif %}
+    </div>
+{% else %}
+    <p>No servers yet. Click "Create Server" to make your first one.</p>
+{% endfor %}
+</div>

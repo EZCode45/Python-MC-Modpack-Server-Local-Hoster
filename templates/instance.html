@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ inst.name }}</h2>
+<p>{{ inst.loader }} · {{ inst.mc_version }} · Port {{ inst.port }}</p>
+
+{% if not inst.eula_accepted %}
+<div class="eula-box">
+    <p>You must accept the <a href="https://aka.ms/MinecraftEULA" target="_blank">Minecraft EULA</a> before starting this server.</p>
+    <button onclick="acceptEula()">I Agree to the EULA</button>
+</div>
+{% endif %}
+
+<div>
+    <button onclick="apiCall('start')">Start</button>
+    <button onclick="apiCall('stop')">Stop</button>
+    <button onclick="apiCall('restart')">Restart</button>
+</div>
+
+<h3>Console</h3>
+<pre id="console" class="console"></pre>
+<input type="text" id="command-input" placeholder="Type a command and press Enter">
+
+<h3>Settings (server.properties)</h3>
+<div id="properties-editor">Loading...</div>
+<button onclick="saveProperties()">Save Settings</button>
+
+<script>
+const instanceId = "{{ inst.id }}";
+
+async function acceptEula() {
+    await fetch(`/api/instances/${instanceId}/accept-eula`, { method: "POST" });
+    window.location.reload();
+}
+
+async function apiCall(action) {
+    const res = await fetch(`/api/instances/${instanceId}/${action}`, { method: "POST" });
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail);
+    }
+}
+
+// Console WebSocket
+const consoleEl = document.getElementById("console");
+const ws = new WebSocket(`ws://${location.host}/api/instances/${instanceId}/console`);
+ws.onmessage = (event) => {
+    consoleEl.textContent += event.data + "\n";
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+};
+document.getElementById("command-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.value.trim()) {
+        ws.send(e.target.value.trim());
+        e.target.value = "";
+    }
+});
+
+// Properties editor
+async function loadProperties() {
+    const res = await fetch(`/api/instances/${instanceId}/properties`);
+    const props = await res.json();
+    const container = document.getElementById("properties-editor");
+    container.innerHTML = "";
+    for (const [key, value] of Object.entries(props)) {
+        const row = document.createElement("div");
+        row.innerHTML = `<label>${key} <input data-key="${key}" value="${value}"></label>`;
+        container.appendChild(row);
+    }
+}
+
+async function saveProperties() {
+    const inputs = document.querySelectorAll("#properties-editor input");
+    const props = {};
+    inputs.forEach(i => props[i.dataset.key] = i.value);
+    await fetch(`/api/instances/${instanceId}/properties`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(props),
+    });
+    alert("Saved. Restart the server for changes to take effect.");
+}
+
+loadProperties();
+</script>
+{% endblock %}
