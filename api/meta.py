@@ -1,6 +1,10 @@
-from fastapi import APIRouter
+import os
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 import java as java_check
+import config
 from loaders import fabric
 
 router = APIRouter(prefix="/api/meta")
@@ -13,6 +17,24 @@ def java_status():
         return {"found": False}
     version = java_check.get_java_version(path)
     return {"found": True, "path": path, "version": version}
+
+
+class JavaPathRequest(BaseModel):
+    path: str
+
+
+@router.post("/java/override")
+def set_java_path(req: JavaPathRequest):
+    if not os.path.isfile(req.path):
+        raise HTTPException(status_code=400, detail="That file doesn't exist")
+    config.set_java_override(req.path)
+    return {"status": "saved", "path": req.path}
+
+
+@router.delete("/java/override")
+def clear_java_path():
+    config.set_java_override(None)
+    return {"status": "cleared"}
 
 
 @router.get("/fabric/loader-versions/{mc_version}")

@@ -5,6 +5,15 @@ from collections import deque
 
 from java import find_java
 
+# Captured once at app startup (see cli.py) since worker threads that
+# run sync FastAPI endpoints don't have their own event loop to find.
+_main_loop: asyncio.AbstractEventLoop | None = None
+
+
+def set_main_loop(loop: asyncio.AbstractEventLoop):
+    global _main_loop
+    _main_loop = loop
+
 
 class ServerProcess:
     def __init__(self, instance_dir: str, jar_name: str, ram_mb: int):
@@ -16,7 +25,6 @@ class ServerProcess:
         self.console_buffer: deque[str] = deque(maxlen=500)
         self._reader_thread: threading.Thread | None = None
         self._subscribers: list[asyncio.Queue] = []
-        self._loop: asyncio.AbstractEventLoop | None = None
 
     def start(self):
         java_path = find_java()
@@ -38,7 +46,6 @@ class ServerProcess:
             text=True,
             bufsize=1,
         )
-        self._loop = asyncio.get_event_loop()
         self._reader_thread = threading.Thread(target=self._read_output, daemon=True)
         self._reader_thread.start()
 
@@ -49,13 +56,14 @@ class ServerProcess:
             line = line.rstrip("\n")
             self.console_buffer.append(line)
             self._broadcast(line)
+        # process ended
         self._broadcast("[process exited]")
 
     def _broadcast(self, line: str):
-        if self._loop is None:
+        if _main_loop is None:
             return
         for q in list(self._subscribers):
-            self._loop.call_soon_threadsafe(q.put_nowait, line)
+            _main_loop.call_soon_threadsafe(q.put_nowait, line)
 
     def subscribe(self) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue()

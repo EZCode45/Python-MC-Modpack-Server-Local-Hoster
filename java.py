@@ -6,6 +6,16 @@ import os
 import platform
 
 
+def _from_java_home() -> str | None:
+    """Most JDK installers set JAVA_HOME even when PATH isn't updated correctly."""
+    java_home = os.environ.get("JAVA_HOME")
+    if not java_home:
+        return None
+    exe = "java.exe" if platform.system() == "Windows" else "java"
+    path = os.path.join(java_home, "bin", exe)
+    return path if os.path.isfile(path) else None
+
+
 def _search_common_locations() -> str | None:
     """Fallback search when 'java' isn't resolvable via PATH.
     Checks typical JDK install directories directly."""
@@ -33,7 +43,6 @@ def _search_common_locations() -> str | None:
     for pattern in patterns:
         candidates.extend(glob.glob(pattern))
 
-    # prefer the newest-looking path (simple heuristic: sort descending)
     candidates.sort(reverse=True)
     for path in candidates:
         if os.path.isfile(path):
@@ -43,9 +52,19 @@ def _search_common_locations() -> str | None:
 
 def find_java() -> str | None:
     """Return path to java executable, or None if not found.
-    First checks PATH, then falls back to common install locations
-    (useful on Windows where PATH isn't always inherited by every process)."""
+    Priority: manual override set in dashboard settings, then PATH,
+    then JAVA_HOME, then common install locations (useful on Windows
+    where PATH isn't always inherited by every process)."""
+    from config import get_java_override  # imported here to avoid circular import at module load
+
+    override = get_java_override()
+    if override and os.path.isfile(override):
+        return override
+
     path = shutil.which("java")
+    if path:
+        return path
+    path = _from_java_home()
     if path:
         return path
     return _search_common_locations()
