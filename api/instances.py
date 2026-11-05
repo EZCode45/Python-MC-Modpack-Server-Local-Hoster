@@ -100,7 +100,10 @@ def start_instance(instance_id: str):
     proc = _get_or_create_process(instance_id)
     if proc.is_running():
         raise HTTPException(status_code=400, detail="Already running")
-    proc.start()
+    try:
+        proc.start()
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return {"status": "started"}
 
 
@@ -118,7 +121,10 @@ def restart_instance(instance_id: str):
     proc = supervisor.get(instance_id)
     if proc is None:
         raise HTTPException(status_code=404, detail="Instance not found")
-    proc.restart()
+    try:
+        proc.restart()
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return {"status": "restarted"}
 
 

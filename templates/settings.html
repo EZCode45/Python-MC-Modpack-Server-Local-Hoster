@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Settings</h2>
+
+<h3>Java</h3>
+<div id="java-status">Checking...</div>
+
+<p>If Java isn't being detected automatically, paste the full path to
+<code>java.exe</code> here (e.g. <code>C:\Program Files\Java\jdk-21\bin\java.exe</code>):</p>
+<input type="text" id="java-path" style="width: 100%;" placeholder="C:\Program Files\Java\jdk-21\bin\java.exe">
+<button onclick="saveJavaPath()">Save</button>
+<button onclick="clearJavaPath()">Clear Override</button>
+
+<script>
+async function refreshJavaStatus() {
+    const res = await fetch("/api/meta/java");
+    const data = await res.json();
+    const el = document.getElementById("java-status");
+    if (data.found) {
+        el.innerHTML = `✅ Found: ${data.path} (version ${data.version ?? "unknown"})`;
+    } else {
+        el.innerHTML = `❌ Java not found. Set the path below or install a JDK.`;
+    }
+}
+
+async function saveJavaPath() {
+    const path = document.getElementById("java-path").value.trim();
+    if (!path) return;
+    const res = await fetch("/api/meta/java/override", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+    });
+    if (res.ok) {
+        refreshJavaStatus();
+    } else {
+        const err = await res.json();
+        alert(err.detail);
+    }
+}
+
+async function clearJavaPath() {
+    await fetch("/api/meta/java/override", { method: "DELETE" });
+    document.getElementById("java-path").value = "";
+    refreshJavaStatus();
+}
+
+refreshJavaStatus();
+</script>
+{% endblock %}

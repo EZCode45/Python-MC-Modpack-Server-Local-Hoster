@@ -3,6 +3,8 @@ import threading
 import asyncio
 from collections import deque
 
+from java import find_java
+
 
 class ServerProcess:
     def __init__(self, instance_dir: str, jar_name: str, ram_mb: int):
@@ -17,8 +19,14 @@ class ServerProcess:
         self._loop: asyncio.AbstractEventLoop | None = None
 
     def start(self):
+        java_path = find_java()
+        if java_path is None:
+            raise RuntimeError(
+                "Java was not found on PATH. Install a JDK (Java 21 recommended) "
+                "and make sure 'java' is available in the environment running this program."
+            )
         cmd = [
-            "java", f"-Xmx{self.ram_mb}M", f"-Xms{self.ram_mb}M",
+            java_path, f"-Xmx{self.ram_mb}M", f"-Xms{self.ram_mb}M",
             "-jar", self.jar_name, "nogui"
         ]
         self.process = subprocess.Popen(
@@ -41,7 +49,6 @@ class ServerProcess:
             line = line.rstrip("\n")
             self.console_buffer.append(line)
             self._broadcast(line)
-        # process ended
         self._broadcast("[process exited]")
 
     def _broadcast(self, line: str):
