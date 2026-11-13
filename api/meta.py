@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import java as java_check
 import config
 from loaders import fabric
+from packs import modrinth
 
 router = APIRouter(prefix="/api/meta")
 
@@ -42,3 +43,23 @@ async def fabric_loader_versions(mc_version: str):
     versions = await fabric.get_loader_versions(mc_version)
     # return just the loader version strings, newest first
     return [v["loader"]["version"] for v in versions]
+
+
+@router.get("/modrinth/search")
+async def modrinth_search(query: str):
+    return await modrinth.search_modpacks(query)
+
+
+@router.get("/modrinth/{project_id}/versions")
+async def modrinth_pack_versions(project_id: str):
+    return await modrinth.get_pack_versions(project_id, loader="fabric")
+
+
+@router.get("/modrinth/mods/search")
+async def modrinth_mod_search(query: str):
+    return await modrinth.search_mods(query)
+
+
+@router.get("/modrinth/mods/{project_id}/versions")
+async def modrinth_mod_versions(project_id: str, mc_version: str, loader: str = "fabric"):
+    return await modrinth.get_mod_versions(project_id, mc_version, loader=loader)

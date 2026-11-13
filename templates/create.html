@@ -2,6 +2,22 @@
 {% block content %}
 <h2>Create Fabric Server</h2>
 
+<h3>1. Pick a modpack (optional)</h3>
+<input type="text" id="pack-search" placeholder="Search Modrinth modpacks...">
+<button onclick="searchPacks()">Search</button>
+<div id="pack-results"></div>
+
+<div id="pack-versions-box" style="display:none;">
+    <h4>Select a version</h4>
+    <select id="pack-versions"></select>
+    <button onclick="applyPackVersion()">Use this version</button>
+</div>
+
+<p id="selected-pack" style="font-weight:bold;"></p>
+
+<hr>
+
+<h3>2. Server details</h3>
 <form id="create-form">
     <label>Server Name <input type="text" id="name" required></label><br>
     <label>Minecraft Version <input type="text" id="mc_version" placeholder="1.21.1" required></label><br>
@@ -14,10 +30,62 @@
 <p id="create-status"></p>
 
 <script>
+let selectedPack = null;       // { project_id, title }
+let selectedPackVersion = null; // { version_id, file_url, game_versions, loaders }
+
+async function searchPacks() {
+    const query = document.getElementById("pack-search").value.trim();
+    if (!query) return;
+    const res = await fetch(`/api/meta/modrinth/search?query=${encodeURIComponent(query)}`);
+    const packs = await res.json();
+
+    const container = document.getElementById("pack-results");
+    container.innerHTML = "";
+    packs.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `<strong>${p.title}</strong><p>${p.description}</p>`;
+        const btn = document.createElement("button");
+        btn.textContent = "Select";
+        btn.onclick = () => loadPackVersions(p);
+        div.appendChild(btn);
+        container.appendChild(div);
+    });
+}
+
+async function loadPackVersions(pack) {
+    selectedPack = pack;
+    const res = await fetch(`/api/meta/modrinth/${pack.project_id}/versions`);
+    const versions = await res.json();
+
+    const select = document.getElementById("pack-versions");
+    select.innerHTML = "";
+    versions.forEach((v, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = `${v.name} (MC ${v.game_versions.join(", ")})`;
+        select.appendChild(opt);
+    });
+    select.dataset.versions = JSON.stringify(versions);
+
+    document.getElementById("pack-versions-box").style.display = "block";
+}
+
+function applyPackVersion() {
+    const select = document.getElementById("pack-versions");
+    const versions = JSON.parse(select.dataset.versions);
+    selectedPackVersion = versions[select.value];
+
+    document.getElementById("mc_version").value = selectedPackVersion.game_versions[0] || "";
+    document.getElementById("selected-pack").textContent =
+        `Selected: ${selectedPack.title} — ${selectedPackVersion.name}`;
+}
+
 document.getElementById("create-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const status = document.getElementById("create-status");
-    status.textContent = "Creating... downloading server jar, this may take a moment.";
+    status.textContent = "Creating... downloading server jar" +
+        (selectedPackVersion ? " and modpack files" : "") + ", this may take a moment.";
 
     const body = {
         name: document.getElementById("name").value,
@@ -26,6 +94,12 @@ document.getElementById("create-form").addEventListener("submit", async (e) => {
         ram_mb: parseInt(document.getElementById("ram_mb").value),
         port: parseInt(document.getElementById("port").value),
     };
+
+    if (selectedPackVersion) {
+        body.modpack_project_id = selectedPack.project_id;
+        body.modpack_version_id = selectedPackVersion.version_id;
+        body.modpack_file_url = selectedPackVersion.file_url;
+    }
 
     const res = await fetch("/api/instances", {
         method: "POST",

@@ -17,6 +17,8 @@ class Instance:
     port: int = DEFAULT_MC_PORT
     eula_accepted: bool = False
     jar_name: str = "server.jar"
+    modpack_project_id: str | None = None
+    modpack_version_id: str | None = None
 
     @property
     def dir(self) -> str:

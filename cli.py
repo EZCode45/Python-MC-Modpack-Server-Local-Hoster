@@ -9,6 +9,7 @@ from config import DASHBOARD_HOST, DASHBOARD_PORT
 from api.instances import router as instances_router
 from api.meta import router as meta_router
 from api.pages import router as pages_router
+from api.mods import router as mods_router
 import server as server_module
 
 
@@ -29,6 +30,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(pages_router)
 app.include_router(instances_router)
 app.include_router(meta_router)
+app.include_router(mods_router)
 
 
 def main():

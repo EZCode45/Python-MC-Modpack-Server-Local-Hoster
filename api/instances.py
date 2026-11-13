@@ -9,6 +9,7 @@ import instances as inst_store
 import properties as props_store
 from server import ServerProcess
 from loaders import fabric
+from packs import modrinth
 
 router = APIRouter(prefix="/api/instances")
 
@@ -38,6 +39,11 @@ class CreateInstanceRequest(BaseModel):
     loader_version: str
     ram_mb: int = 2048
     port: int = 25565
+    # optional: if set, a Modrinth modpack is downloaded and installed
+    # into the instance after the base Fabric server jar is in place
+    modpack_project_id: str | None = None
+    modpack_version_id: str | None = None
+    modpack_file_url: str | None = None
 
 
 @router.get("")
@@ -77,6 +83,23 @@ async def create_instance(req: CreateInstanceRequest):
         installer_version=installer_version,
         dest_path=jar_path,
     )
+
+    # if a Modrinth modpack was chosen, download the .mrpack and install
+    # its mods/configs/overrides into the instance folder
+    if req.modpack_file_url:
+        mrpack_path = os.path.join(inst.dir, "_pack.mrpack")
+        await modrinth.download_mrpack(req.modpack_file_url, mrpack_path)
+        try:
+            await modrinth.install_modpack(inst.dir, mrpack_path)
+        except ValueError as e:
+            raise HTTPException(status_code=502, detail=str(e))
+        finally:
+            os.remove(mrpack_path)
+        inst_store.update_instance(
+            inst.id,
+            modpack_project_id=req.modpack_project_id,
+            modpack_version_id=req.modpack_version_id,
+        )
 
     return inst.__dict__
 
