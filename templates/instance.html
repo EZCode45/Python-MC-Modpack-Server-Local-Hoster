@@ -20,12 +20,23 @@
 <pre id="console" class="console"></pre>
 <input type="text" id="command-input" placeholder="Type a command and press Enter">
 
+<h3>Mods</h3>
+<input type="text" id="mod-search" placeholder="Search Modrinth mods...">
+<button onclick="searchMods()">Search</button>
+<div id="mod-search-results"></div>
+
+<h4>Installed</h4>
+<button onclick="checkModUpdates()">Check for Updates</button>
+<div id="installed-mods">Loading...</div>
+
 <h3>Settings (server.properties)</h3>
 <div id="properties-editor">Loading...</div>
 <button onclick="saveProperties()">Save Settings</button>
 
 <script>
 const instanceId = "{{ inst.id }}";
+const instanceMcVersion = "{{ inst.mc_version }}";
+const instanceLoader = "{{ inst.loader }}";
 
 async function acceptEula() {
     await fetch(`/api/instances/${instanceId}/accept-eula`, { method: "POST" });
@@ -80,5 +91,118 @@ async function saveProperties() {
 }
 
 loadProperties();
+
+// Mods
+async function searchMods() {
+    const query = document.getElementById("mod-search").value.trim();
+    if (!query) return;
+    const res = await fetch(`/api/meta/modrinth/mods/search?query=${encodeURIComponent(query)}`);
+    const mods = await res.json();
+
+    const container = document.getElementById("mod-search-results");
+    container.innerHTML = "";
+    mods.forEach(m => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `<strong>${m.title}</strong><p>${m.description}</p>`;
+        const btn = document.createElement("button");
+        btn.textContent = "Install latest";
+        btn.onclick = () => installLatest(m);
+        div.appendChild(btn);
+        container.appendChild(div);
+    });
+}
+
+async function installLatest(mod) {
+    const res = await fetch(
+        `/api/meta/modrinth/mods/${mod.project_id}/versions?mc_version=${instanceMcVersion}&loader=${instanceLoader}`
+    );
+    const versions = await res.json();
+    if (versions.length === 0) {
+        alert(`No version of ${mod.title} is available for ${instanceLoader} ${instanceMcVersion}`);
+        return;
+    }
+    const latest = versions[0];
+
+    const installRes = await fetch(`/api/instances/${instanceId}/mods`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            project_id: mod.project_id,
+            title: mod.title,
+            version_id: latest.version_id,
+            version_number: latest.version_number,
+            filename: latest.filename,
+            file_url: latest.file_url,
+            file_sha1: latest.file_sha1,
+        }),
+    });
+
+    if (installRes.ok) {
+        loadInstalledMods();
+    } else {
+        const err = await installRes.json();
+        alert(err.detail);
+    }
+}
+
+async function loadInstalledMods() {
+    const res = await fetch(`/api/instances/${instanceId}/mods`);
+    const mods = await res.json();
+
+    const container = document.getElementById("installed-mods");
+    container.innerHTML = "";
+    if (mods.length === 0) {
+        container.textContent = "No mods installed.";
+        return;
+    }
+    mods.forEach(m => {
+        const div = document.createElement("div");
+        div.innerHTML = `${m.title} (${m.version_number})`;
+        const btn = document.createElement("button");
+        btn.textContent = "Remove";
+        btn.onclick = () => removeMod(m.project_id);
+        div.appendChild(btn);
+        container.appendChild(div);
+    });
+}
+
+async function removeMod(projectId) {
+    await fetch(`/api/instances/${instanceId}/mods/${projectId}`, { method: "DELETE" });
+    loadInstalledMods();
+}
+
+async function checkModUpdates() {
+    const res = await fetch(`/api/instances/${instanceId}/mods/updates`);
+    const updates = await res.json();
+    if (updates.length === 0) {
+        alert("All mods are up to date.");
+        return;
+    }
+    const lines = updates.map(u => `${u.title}: ${u.current_version} → ${u.latest_version}`);
+    const confirmed = confirm(
+        "Updates available:\n\n" + lines.join("\n") + "\n\nInstall all updates now?"
+    );
+    if (!confirmed) return;
+
+    for (const u of updates) {
+        await fetch(`/api/instances/${instanceId}/mods`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                project_id: u.project_id,
+                title: u.title,
+                version_id: u.latest.version_id,
+                version_number: u.latest.version_number,
+                filename: u.latest.filename,
+                file_url: u.latest.file_url,
+                file_sha1: u.latest.file_sha1,
+            }),
+        });
+    }
+    loadInstalledMods();
+}
+
+loadInstalledMods();
 </script>
 {% endblock %}

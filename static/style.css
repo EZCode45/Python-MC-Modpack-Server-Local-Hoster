@@ -1,10 +1,231 @@
-body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-header h1 a { text-decoration: none; color: #222; }
-.btn, button { padding: .5rem 1rem; cursor: pointer; }
-.instance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; }
-.card { border: 1px solid #ccc; border-radius: 8px; padding: 1rem; }
-.running { color: green; font-weight: bold; }
-.stopped { color: #888; }
-.console { background: #111; color: #0f0; padding: 1rem; height: 300px; overflow-y: auto; font-family: monospace; }
-.eula-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 1rem; margin: 1rem 0; }
-#command-input { width: 100%; padding: .5rem; margin-top: .5rem; }
+/* ---------- Tokens ---------- */
+:root {
+    --bg: #11141A;
+    --surface: #181C24;
+    --surface-raised: #1F242E;
+    --border: #2A3040;
+    --text: #E6E9EF;
+    --text-muted: #8B93A7;
+    --accent: #38C799;
+    --accent-hover: #2FAE87;
+    --accent-soft: rgba(56, 199, 153, 0.12);
+    --danger: #E35D5D;
+    --danger-soft: rgba(227, 93, 93, 0.12);
+    --warn: #E8B339;
+    --font-heading: "Space Grotesk", sans-serif;
+    --font-body: "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.5em;
+}
+
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.15rem; margin-top: 2rem; color: var(--text); }
+h4 { font-size: 0.95rem; color: var(--text-muted); text-transform: none; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code { font-family: var(--font-mono); font-size: 0.9em; color: var(--accent); }
+
+/* ---------- Layout ---------- */
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+header h1 { font-size: 1.1rem; margin: 0; }
+header h1 a { color: var(--text); }
+header h1 a:hover { text-decoration: none; color: var(--accent); }
+
+nav a {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-family: var(--font-heading);
+}
+nav a:hover { color: var(--text); text-decoration: none; }
+
+main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+}
+
+/* ---------- Buttons & inputs ---------- */
+button, .btn {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.55rem 1rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    display: inline-block;
+}
+
+button:hover, .btn:hover {
+    border-color: var(--accent);
+    text-decoration: none;
+}
+
+button:first-of-type,
+.btn {
+    background: var(--accent);
+    color: #0B1410;
+    border-color: var(--accent);
+}
+
+button:first-of-type:hover,
+.btn:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    font-family: var(--font-body);
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.9rem;
+}
+
+input:focus, select:focus, button:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.9rem;
+}
+
+label input, label select {
+    display: block;
+    width: 100%;
+    margin-top: 0.35rem;
+}
+
+/* ---------- Instance cards ---------- */
+.instance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 8px;
+    padding: 1.1rem 1.2rem;
+}
+
+.card h3 { margin-top: 0; font-size: 1.05rem; }
+.card h3 a { color: var(--text); }
+.card h3 a:hover { color: var(--accent); }
+.card p { margin: 0.3rem 0; color: var(--text-muted); font-size: 0.88rem; }
+
+.running { color: var(--accent); font-family: var(--font-mono); font-weight: 600; }
+.stopped { color: var(--text-muted); font-family: var(--font-mono); }
+
+/* left accent bar reflects status rather than relying on text color alone */
+.instance-grid .card:has(.running) { border-left-color: var(--accent); }
+.instance-grid .card:has(.stopped) { border-left-color: var(--border); }
+
+/* ---------- Console ---------- */
+.console {
+    background: #0B0E13;
+    color: #C9E8DB;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    height: 320px;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    margin-top: 0.75rem;
+}
+
+#command-input {
+    width: 100%;
+    margin-top: 0.6rem;
+    font-family: var(--font-mono);
+}
+
+/* ---------- EULA notice ---------- */
+.eula-box {
+    background: rgba(232, 179, 57, 0.08);
+    border: 1px solid rgba(232, 179, 57, 0.3);
+    border-left: 3px solid var(--warn);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+}
+
+.eula-box p { margin: 0 0 0.75rem; color: var(--text); }
+
+/* ---------- Settings / property editor rows ---------- */
+#properties-editor > div,
+#installed-mods > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+#properties-editor label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    margin-bottom: 0;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+#properties-editor input {
+    flex: 1;
+    margin-top: 0;
+}
